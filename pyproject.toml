@@ -1,0 +1,91 @@
+#pyproject.toml
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "musicroom"
+version = "0.1.0"
+description = "Music Room Telegram booking bot"
+readme = "README.md"
+requires-python = ">=3.10,<3.14"
+dependencies = [
+  "aiogram==3.22.0",
+  "SQLAlchemy==2.0.45",
+  "alembic==1.17.2",
+  "asyncpg==0.31.0",
+  "APScheduler==3.11.2",
+  "python-dotenv==1.2.1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "mypy==1.18.2",
+  "ruff==0.15.5",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 88
+respect-gitignore = true
+cache-dir = ".ruff_cache"
+exclude = [
+  ".venv",
+  "build",
+  "dist",
+  "migrations",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "DTZ"]
+ignore = ["E203", "E501"]
+fixable = ["ALL"]
+preview = true
+explicit-preview-rules = true
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"tests/**/*.py" = ["S101"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+skip-magic-trailing-comma = false
+docstring-code-format = true
+
+[tool.mypy]
+python_version = "3.13"
+explicit_package_bases = true
+check_untyped_defs = true
+plugins = [
+  "sqlalchemy.ext.mypy.plugin",
+]
+
+[[tool.mypy.overrides]]
+module = [
+  "tests.*",
+]
+disallow_untyped_defs = false
+check_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = [
+  "alembic.*",
+  "migrations.*",
+]
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = [
+  "aiogram",
+  "aiogram.*",
+  "apscheduler",
+  "apscheduler.*",
+]
+ignore_missing_imports = true
+follow_imports = "skip"

@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  checks:
+    name: Python 3.13 checks
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: musicroom
+          POSTGRES_USER: musicroom
+          POSTGRES_PASSWORD: musicroom
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U musicroom -d musicroom"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      BOT_TOKEN: "ci-token"
+      DATABASE_URL: "postgresql+asyncpg://musicroom:musicroom@localhost:5432/musicroom"
+      TIMEZONE: "Asia/Almaty"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Verify lockfile
+        run: uv lock --locked
+
+      - name: Verify exported requirements locks are in sync
+        run: |
+          uv --cache-dir .uv-cache export --frozen --no-dev --no-emit-project --output-file requirements.lock
+          uv --cache-dir .uv-cache export --frozen --extra dev --no-emit-project --output-file requirements-dev.lock
+          git diff --exit-code requirements.lock requirements-dev.lock
+
+      - name: Install project
+        run: uv sync --frozen --extra dev
+
+      - name: Run Ruff
+        run: uv run ruff check app tests
+
+      - name: Run mypy
+        run: uv run mypy app
+
+      - name: Run unit tests
+        run: uv run python -m unittest discover -s tests
+
+      - name: Check Alembic heads
+        run: uv run alembic heads
+
+      - name: Run migrations against Postgres
+        run: uv run alembic upgrade head
+
+      - name: Run healthcheck
+        run: uv run python -m app.healthcheck
+
+      - name: Build Docker image
+        run: docker build -t musicroom:ci .

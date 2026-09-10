@@ -1,0 +1,80 @@
+# -----------------------------
+# Python
+# -----------------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.env.*
+!.env.example
+*.env
+ENV/
+.build/
+dist/
+build/
+.mypy_cache
+
+# Byte-compiled
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+*.egg-info/
+.eggs/
+
+# Virtual environment directories
+venv/
+.venv/
+env/
+.env/
+
+# -----------------------------
+# IDEs / Editors
+# -----------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# -----------------------------
+# OS files
+# -----------------------------
+.DS_Store
+Thumbs.db
+
+# -----------------------------
+# Logs
+# -----------------------------
+*.log
+logs/
+
+# -----------------------------
+# Alembic cache artifacts
+# -----------------------------
+alembic/versions/*.tmp
+alembic/versions/*.pyc
+
+# -----------------------------
+# Environment / Secrets
+# -----------------------------
+*.local
+
+# Exclude PostgreSQL dumps
+*.sql
+*.dump
+*.backup
+*.sqlite
+*.sqlite3
+
+.git
+.editorconfig
+.ruff_cache/
+.uv-cache/
+
+.claude
+.codex
+docs/superpowers/
+.pytest_cache/
+AGENTS.md
+CLAUDE.md
