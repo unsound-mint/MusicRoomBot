@@ -1,8 +1,12 @@
 # Music Room Bot
 
-[![CI](https://github.com/denisandreyev/MusicRoomBot/actions/workflows/ci.yml/badge.svg)](https://github.com/denisandreyev/MusicRoomBot/actions/workflows/ci.yml)
+[![CI](https://github.com/unsound-mint/MusicRoomBot/actions/workflows/ci.yml/badge.svg)](https://github.com/unsound-mint/MusicRoomBot/actions/workflows/ci.yml)
 
-Telegram bot for Music Room booking, attendance verification, reminders, swaps, and admin operations.
+Telegram bot that runs bookings for Nazarbayev University's Music Room: slot booking, attendance verification, reminders, swaps, and admin operations.
+
+**In production since December 2025, used by about 200 students. The practice slots are usually fully booked**, which is why double-booking protection, fair weekly limits and attendance checks matter.
+
+![Booking, schedule, admin and equipment flows in Telegram](docs/img/bot.png)
 
 ## What It Does
 
@@ -31,6 +35,24 @@ This project is intended to be readable as a production-style async Python servi
   Postgres-backed migration test, and Docker build run in GitHub Actions.
 
 ## Architecture
+
+```mermaid
+flowchart LR
+    U[Students and admins<br/>in Telegram] -->|updates| D[aiogram dispatcher]
+    D --> H["Handlers (thin)<br/>app/bot/handlers"]
+    H --> S["Services: business rules<br/>booking, reminders, attendance,<br/>swaps, equipment, admin"]
+    S --> DB[("PostgreSQL<br/>unique constraints,<br/>advisory locks")]
+    SCH["APScheduler<br/>weekly reset, reminders,<br/>attendance checks"] --> S
+    S -->|messages, reminders| U
+    CFG["Runtime config table<br/>(chat IDs, geo, limits)"] -.-> S
+```
+
+How a booking stays correct when 200 people compete for the same slots:
+
+1. **Service check** for a fast, friendly answer ("slot taken").
+2. **Database unique constraint** on the slot: if two users press at the same moment, only one insert can win.
+3. **Advisory lock per user and week** around count-and-insert, so the weekly limit can't be exceeded by double-tapping.
+4. **Backpressure:** an in-process semaphore keeps bursts of taps from exhausting the connection pool.
 
 ```text
 app/
