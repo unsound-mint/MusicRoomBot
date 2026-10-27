@@ -29,7 +29,7 @@ from app.bot.ui import edit_or_answer, safe_answer_callback
 from app.core.database import AsyncSessionLocal
 from app.services.config_runtime import OPTIONAL_INT_CONFIG_KEYS
 from app.services.config_service import set_config_value
-from app.services.config_utils import parse_float, parse_int
+from app.services.config_utils import is_valid_form_url, parse_float, parse_int
 from app.services.equipment_request_service import (
     get_equipment_request_with_ranges,
     parse_equipment_ranges_text,
@@ -192,6 +192,16 @@ async def admin_custom_value_input(message: types.Message, state: FSMContext):
         await state.clear()
         return await message.answer(
             f"{key} updated to {float_value}.",
+            reply_markup=_config_next_kb(),
+        )
+    if action == "cfg_form_url":
+        if not is_valid_form_url(value_text):
+            return await message.answer("Send a full link starting with https:// or http://.")
+        async with AsyncSessionLocal() as db:
+            await set_config_value(db, "access_form_url", value_text)
+        await state.clear()
+        return await message.answer(
+            "Access form link updated.",
             reply_markup=_config_next_kb(),
         )
     if action == "cfg_chat_id":

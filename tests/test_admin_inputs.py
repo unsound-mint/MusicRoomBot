@@ -153,6 +153,41 @@ class AdminInputsTests(IsolatedAsyncioTestCase):
             ],
         )
 
+    async def test_admin_custom_value_input_saves_valid_form_url(self) -> None:
+        state = AsyncMock()
+        state.get_data.return_value = {"admin_action": "cfg_form_url"}
+        message = SimpleNamespace(text="https://forms.example.test/apply", answer=AsyncMock())
+        db = SimpleNamespace()
+        session_cm = AsyncMock()
+        session_cm.__aenter__.return_value = db
+        session_cm.__aexit__.return_value = False
+
+        with (
+            patch("app.bot.handlers.admin_inputs.check_admin_and_reply", new=AsyncMock(return_value=True)),
+            patch("app.bot.handlers.admin_inputs.AsyncSessionLocal", return_value=session_cm),
+            patch("app.bot.handlers.admin_inputs.set_config_value", new=AsyncMock()) as set_config_value,
+        ):
+            await admin_custom_value_input(message, state)
+
+        set_config_value.assert_awaited_once_with(
+            db, "access_form_url", "https://forms.example.test/apply"
+        )
+        state.clear.assert_awaited_once()
+
+    async def test_admin_custom_value_input_rejects_invalid_form_url(self) -> None:
+        state = AsyncMock()
+        state.get_data.return_value = {"admin_action": "cfg_form_url"}
+        message = SimpleNamespace(text="not a link", answer=AsyncMock())
+
+        with (
+            patch("app.bot.handlers.admin_inputs.check_admin_and_reply", new=AsyncMock(return_value=True)),
+            patch("app.bot.handlers.admin_inputs.set_config_value", new=AsyncMock()) as set_config_value,
+        ):
+            await admin_custom_value_input(message, state)
+
+        set_config_value.assert_not_awaited()
+        state.clear.assert_not_awaited()
+
     async def test_admin_custom_value_input_rejects_blank_for_required_chat_id(self) -> None:
         await self._assert_required_chat_id_rejects_clear_value("")
 

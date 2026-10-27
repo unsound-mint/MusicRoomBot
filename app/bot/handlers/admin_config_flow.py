@@ -233,6 +233,20 @@ async def handle_admin_config_callback(callback, state, data: str):
             reply_markup=admin_back_kb("admin_cfg"),
         )
 
+    if data == "admin_cfg_form_url":
+        current = await get_runtime_config("access_form_url")
+        await state.set_state(AdminInputStates.waiting_custom_value)
+        await state.update_data(
+            admin_action="cfg_form_url",
+            admin_config_key="access_form_url",
+            admin_back="admin_cfg",
+        )
+        return await edit_or_answer(
+            callback,
+            f"Access form\n\nCurrent link:\n{current}\n\nSend the new link (https://...).",
+            reply_markup=admin_back_kb("admin_cfg"),
+        )
+
     if data == "admin_cfg_rules_confirm":
         rules_text = (await state.get_data()).get("admin_rules_preview")
         if not rules_text:

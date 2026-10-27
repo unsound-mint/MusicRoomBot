@@ -5,7 +5,7 @@ import os
 from time import monotonic
 from typing import Literal, overload
 
-from app.core.config import RUNTIME_CONFIG_CACHE_TTL
+from app.core.config import ACCESS_FORM_URL, RUNTIME_CONFIG_CACHE_TTL
 from app.core.database import AsyncSessionLocal
 from app.services.config_service import get_config_values
 
@@ -28,7 +28,7 @@ type OptionalIntRuntimeConfigKey = Literal[
     "equipment_topic_id",
 ]
 type OptionalStrRuntimeConfigKey = Literal["geo_center_lat", "geo_center_lon"]
-type StrRuntimeConfigKey = Literal["rules_text"]
+type StrRuntimeConfigKey = Literal["rules_text", "access_form_url"]
 
 
 def _get_optional_int_env(name: str, default: int | None) -> int | None:
@@ -58,6 +58,7 @@ DEFAULTS: dict[str, RuntimeConfigValue] = {
     "member_topic_id": None,
     "equipment_topic_id": _get_optional_int_env("EQUIPMENT_TOPIC_ID", None),
     "rules_text": "Need to be updated.",
+    "access_form_url": ACCESS_FORM_URL,
 }
 OPTIONAL_INT_CONFIG_KEYS = {"equipment_topic_id"}
 

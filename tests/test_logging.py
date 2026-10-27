@@ -3,7 +3,7 @@ import json
 import logging
 from unittest import TestCase
 
-from app.core.logging import JsonFormatter, configure_logging
+from app.core.logging import JsonFormatter, configure_logging, recent_issues
 
 
 class JsonLoggingTests(TestCase):
@@ -84,5 +84,8 @@ class JsonLoggingTests(TestCase):
 
         root = logging.getLogger()
 
-        self.assertEqual(len(root.handlers), 1)
-        self.assertIsInstance(root.handlers[0].formatter, JsonFormatter)
+        stream_handlers = [h for h in root.handlers if isinstance(h, logging.StreamHandler)]
+        self.assertEqual(len(stream_handlers), 1)
+        self.assertIsInstance(stream_handlers[0].formatter, JsonFormatter)
+        self.assertEqual(len(root.handlers), 2)
+        self.assertIn(recent_issues, root.handlers)

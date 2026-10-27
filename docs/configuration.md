@@ -15,7 +15,7 @@ Create `.env` from `.env.example` for local development.
 | `BOT_TOKEN` | Telegram bot token from BotFather. Required to start polling. | `123456:token` |
 | `DATABASE_URL` | Async PostgreSQL connection URL for local runs. Docker Compose sets this automatically for the bot container. | `postgresql+asyncpg://user:pass@localhost:5432/musicroom` |
 | `TIMEZONE` | Time zone used for booking dates, reminders, and scheduled jobs. | `Asia/Almaty` |
-| `ACCESS_FORM_URL` | Public or private form URL shown to users who need access. | `https://example.com/access-form` |
+| `ACCESS_FORM_URL` | Default for the `access_form_url` runtime setting (form link shown to users who need access). | `https://example.com/access-form` |
 
 `postgres://` and `postgresql://` URLs are normalized to
 `postgresql+asyncpg://` at startup.
@@ -68,6 +68,7 @@ Runtime config values are stored in the `config` table and loaded through
 | `member_topic_id` | unset | int | Optional topic ID in the member group. |
 | `equipment_topic_id` | unset | int or none | Optional topic ID for equipment request posts. |
 | `rules_text` | `Need to be updated.` | string | Rules text shown by the bot. |
+| `access_form_url` | `ACCESS_FORM_URL` env value | string | Access form link shown to users who need access. Editable from the admin config menu. |
 
 Chat and topic IDs may be cleared with an empty string or `none` where the admin
 flow supports clearing.

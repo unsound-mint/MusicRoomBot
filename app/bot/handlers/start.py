@@ -35,7 +35,7 @@ async def cmd_start(message: types.Message) -> types.Message:
         if start_user.created:
             return await message.answer(
                 build_new_user_start_text(),
-                reply_markup=access_form_kb(),
+                reply_markup=await access_form_kb(),
                 parse_mode="Markdown",
             )
 
@@ -43,7 +43,7 @@ async def cmd_start(message: types.Message) -> types.Message:
         if not user.allowed and not is_admin_user:
             return await message.answer(
                 build_pending_access_start_text(),
-                reply_markup=access_form_kb(),
+                reply_markup=await access_form_kb(),
                 parse_mode="Markdown",
             )
 

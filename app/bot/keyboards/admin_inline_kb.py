@@ -266,6 +266,7 @@ def admin_config_kb() -> InlineKeyboardMarkup:
             [InlineKeyboardButton(text="Geo center", callback_data="admin_cfg_geo_center")],
             [InlineKeyboardButton(text="Chat IDs", callback_data="admin_cfg_chat_ids")],
             [InlineKeyboardButton(text="Rules", callback_data="admin_cfg_rules")],
+            [InlineKeyboardButton(text="Access form", callback_data="admin_cfg_form_url")],
             [InlineKeyboardButton(text="Working hours", callback_data="admin_cfg_working_hours")],
             [InlineKeyboardButton(text="⬅️ Back", callback_data="admin_home")],
         ]
@@ -325,6 +326,7 @@ def admin_system_kb() -> InlineKeyboardMarkup:
         [
             [InlineKeyboardButton(text="Status", callback_data="admin_sys_status")],
             [InlineKeyboardButton(text="Scheduler", callback_data="admin_sys_scheduler")],
+            [InlineKeyboardButton(text="Recent issues", callback_data="admin_sys_issues")],
             [InlineKeyboardButton(text="Run weekly reset now", callback_data="admin_sys_reset")],
             [InlineKeyboardButton(text="⬅️ Back", callback_data="admin_home")],
         ]

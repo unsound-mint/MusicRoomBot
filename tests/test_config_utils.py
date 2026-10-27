@@ -12,3 +12,13 @@ class ConfigUtilsTests(TestCase):
     def test_parse_float_validates_input(self) -> None:
         self.assertEqual(parse_float("1.5", minimum=0.0), (1.5, None))
         self.assertEqual(parse_float("bad"), (None, "not a number"))
+
+
+class FormUrlTests(TestCase):
+    def test_is_valid_form_url(self) -> None:
+        from app.services.config_utils import is_valid_form_url
+
+        self.assertTrue(is_valid_form_url("https://forms.gle/abc"))
+        self.assertTrue(is_valid_form_url("http://example.com/form?x=1"))
+        for bad in ("", "forms.gle/abc", "ftp://x.y/z", "https://", "https://a.b/c d", "javascript:alert(1)"):
+            self.assertFalse(is_valid_form_url(bad), bad)

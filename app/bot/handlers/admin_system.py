@@ -9,6 +9,7 @@ from app.bot.keyboards.admin_inline_kb import (
 )
 from app.bot.ui import edit_or_answer, safe_answer_callback
 from app.core.database import AsyncSessionLocal
+from app.core.logging import format_recent_issues
 from app.services.booking_service import weekly_reset
 from app.services.scheduler_service import get_scheduler_jobs
 from app.services.system_status import collect_system_status
@@ -96,6 +97,18 @@ async def admin_system_scheduler(callback: types.CallbackQuery):
     return await edit_or_answer(
         callback,
         "\n".join(lines),
+        reply_markup=admin_back_kb("admin_sys"),
+    )
+
+
+@router.callback_query(F.data == "admin_sys_issues")
+async def admin_system_issues(callback: types.CallbackQuery):
+    if not await check_admin_callback(callback):
+        return
+    await safe_answer_callback(callback)
+    return await edit_or_answer(
+        callback,
+        f"Recent issues (newest first)\n\n{format_recent_issues()}"[:4000],
         reply_markup=admin_back_kb("admin_sys"),
     )
 

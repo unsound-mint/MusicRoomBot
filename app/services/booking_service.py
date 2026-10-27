@@ -589,7 +589,9 @@ async def _do_delete_booking(db, booking, bot=None, is_admin_cancel=False) -> bo
         member_chat_id = await get_runtime_config("member_chat_id")
         member_topic_id = await get_runtime_config("member_topic_id")
 
-        if member_chat_id:
+        if not member_chat_id:
+            log.warning("member_chat_id is not configured; skipping cancelled-slot notice")
+        else:
             from app.bot.keyboards.inline_kb import flash_book_kb
 
             weekday = WEEKDAYS[b_date.weekday()]

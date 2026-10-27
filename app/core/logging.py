@@ -2,6 +2,7 @@ import json
 import logging
 import re
 import sys
+from collections import deque
 from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import Any
@@ -80,6 +81,42 @@ class JsonFormatter(logging.Formatter):
         return json.dumps(payload, default=_json_default, ensure_ascii=False)
 
 
+class RecentIssuesHandler(logging.Handler):
+    """Keep the latest WARNING+ records in memory so admins can inspect them in the bot."""
+
+    def __init__(self, capacity: int = 100) -> None:
+        super().__init__(level=logging.WARNING)
+        self.records: deque[tuple[datetime, str, str, str]] = deque(maxlen=capacity)
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            message = record.getMessage()
+            if record.exc_info and record.exc_info[1] is not None:
+                exc = record.exc_info[1]
+                message = f"{message} | {type(exc).__name__}: {exc}"
+            self.records.append(
+                (datetime.fromtimestamp(record.created, tz=UTC), record.levelname, record.name, message)
+            )
+        except Exception:
+            self.handleError(record)
+
+
+recent_issues = RecentIssuesHandler()
+
+
+def format_recent_issues(limit: int = 10, *, max_message_length: int = 300) -> str:
+    """Newest-first plain-text summary, sized to fit one Telegram message."""
+    items = list(recent_issues.records)[-limit:][::-1]
+    if not items:
+        return "No warnings or errors since the last restart."
+    lines = []
+    for created, level, logger_name, message in items:
+        if len(message) > max_message_length:
+            message = message[: max_message_length - 1] + "…"
+        lines.append(f"{created:%m-%d %H:%M:%S} {level} {logger_name}\n{message}")
+    return "\n\n".join(lines)
+
+
 def configure_logging(level: str, *, logger_levels: Mapping[str, str] | None = None) -> None:
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(JsonFormatter())
@@ -87,6 +124,8 @@ def configure_logging(level: str, *, logger_levels: Mapping[str, str] | None = N
     root = logging.getLogger()
     root.handlers.clear()
     root.addHandler(handler)
+    if recent_issues not in root.handlers:
+        root.addHandler(recent_issues)
     root.setLevel(level)
 
     for logger_name, logger_level in (logger_levels or {}).items():

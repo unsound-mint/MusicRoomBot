@@ -1,4 +1,7 @@
 # app/services/config_utils.py
+from urllib.parse import urlparse
+
+
 def parse_int(
     s: str,
     minimum: int | None = None,
@@ -29,3 +32,11 @@ def parse_float(
     if maximum is not None and v > maximum:
         return None, f"must be <= {maximum}"
     return v, None
+
+
+def is_valid_form_url(value: str) -> bool:
+    """Accept only absolute http(s) links; Telegram rejects other URL buttons."""
+    parsed = urlparse(value)
+    return parsed.scheme in {"http", "https"} and bool(parsed.netloc) and not any(
+        ch.isspace() for ch in value
+    )

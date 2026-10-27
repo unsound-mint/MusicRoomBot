@@ -5,14 +5,15 @@ from datetime import date
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from app.bot.constants.dates import WEEKDAYS
-from app.bot.constants.links import FORMS_LINK
 from app.bot.ui import format_slot_button
+from app.services.config_runtime import get_runtime_config
 
 
-def access_form_kb() -> InlineKeyboardMarkup:
+async def access_form_kb() -> InlineKeyboardMarkup:
+    form_url = await get_runtime_config("access_form_url")
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="Open form", url=FORMS_LINK)]
+            [InlineKeyboardButton(text="Open form", url=form_url)]
         ]
     )
 

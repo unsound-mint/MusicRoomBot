@@ -48,7 +48,7 @@ async def require_allowed_user(
             target,
             pending_text,
             use_edit=use_edit,
-            reply_markup=access_form_kb(),
+            reply_markup=await access_form_kb(),
         )
         return None
     return user

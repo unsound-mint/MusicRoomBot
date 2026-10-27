@@ -7,7 +7,6 @@ from aiogram import F, Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 
-from app.bot.constants.links import FORMS_LINK
 from app.bot.handlers.admin_shared import (
     BulkStates,
     canon_username,
@@ -145,6 +144,7 @@ async def handle_bulk_csv(message: types.Message, state: FSMContext):
     kick_skipped_admin = 0
     kick_failed = 0
     member_chat_id = await get_runtime_config("member_chat_id")
+    form_url = await get_runtime_config("access_form_url")
 
     if member_chat_id:
         async with AsyncSessionLocal() as db:
@@ -168,7 +168,7 @@ async def handle_bulk_csv(message: types.Message, state: FSMContext):
                             user.tg_user_id,
                             "Your access was removed because your information was not found in the current members sheet.\n\n"
                             "To regain access, please follow the standard procedure and complete the Google Form:\n"
-                            f"{FORMS_LINK}",
+                            f"{form_url}",
                         )
                         notified += 1
                     except Exception:
