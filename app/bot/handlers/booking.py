@@ -1,6 +1,5 @@
 # app/bot/handlers/booking.py
-from datetime import date, datetime, time
-from zoneinfo import ZoneInfo
+from datetime import date
 
 from aiogram import F, Router, types
 
@@ -36,7 +35,6 @@ from app.bot.ui import (
     format_slot_text,
     safe_answer_callback,
 )
-from app.core.config import TIMEZONE
 from app.core.database import AsyncSessionLocal
 from app.core.limits import BusyError, acquire_booking_slot, release_booking_slot
 from app.core.rate_limit import allow_booking_start
@@ -48,7 +46,7 @@ from app.services.booking_queries import (
 from app.services.booking_service import safe_create_booking
 from app.services.calendar_service import get_google_calendar_link
 from app.services.date_service import get_current_week_date
-from app.services.time_service import now_tz
+from app.services.time_service import now_tz, slot_start
 
 router = Router()
 
@@ -143,9 +141,7 @@ async def handle_pick_hour(callback: types.CallbackQuery):
     target_date = date.fromisoformat(date_str)
 
     now = now_tz()
-    slot_dt = datetime.combine(target_date, time(hour)).replace(
-        tzinfo=ZoneInfo(TIMEZONE)
-    )
+    slot_dt = slot_start(target_date, hour)
     if slot_dt <= now:
         return await edit_or_answer(
             callback,
@@ -238,9 +234,7 @@ async def handle_book_consecutive(callback: types.CallbackQuery):
     hour = int(hour_str)
     prev_date = date.fromisoformat(parts[4]) if len(parts) > 4 else None
     prev_hour = int(parts[5]) if len(parts) > 5 else None
-    slot_dt = datetime.combine(target_date, time(hour)).replace(
-        tzinfo=ZoneInfo(TIMEZONE)
-    )
+    slot_dt = slot_start(target_date, hour)
     if slot_dt <= now_tz():
         return await callback.message.answer(
             "⏰ This slot is in the past.",

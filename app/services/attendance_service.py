@@ -1,14 +1,12 @@
 # app/services/attendance_service.py
-from datetime import datetime, time, timedelta
-from zoneinfo import ZoneInfo
+from datetime import timedelta
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import TIMEZONE
 from app.models.booking import Booking
 from app.services.config_runtime import get_runtime_config
-from app.services.time_service import now_tz
+from app.services.time_service import now_tz, slot_start
 
 
 async def record_attendance(
@@ -81,9 +79,7 @@ async def get_current_booking(db: AsyncSession, user_id: int) -> Booking | None:
 
     active_bookings: list[Booking] = []
     for b in rows:
-        booking_dt = datetime.combine(b.date, time(b.hour, 0)).replace(
-            tzinfo=ZoneInfo(TIMEZONE)
-        )
+        booking_dt = slot_start(b.date, b.hour)
         if booking_dt <= now < booking_dt + timedelta(minutes=slot_length):
             active_bookings.append(b)
 

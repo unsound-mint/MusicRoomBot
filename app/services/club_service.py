@@ -1,18 +1,16 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import date, datetime, time
-from zoneinfo import ZoneInfo
+from datetime import date
 
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import TIMEZONE
 from app.models.booking import Booking
 from app.models.club import Club, ClubLeader, ClubSlotCancellation
 from app.models.user import User
 from app.models.weekly_slot import WeeklySlot
-from app.services.time_service import now_tz
+from app.services.time_service import now_tz, slot_start
 
 
 @dataclass(frozen=True)
@@ -329,9 +327,7 @@ async def cancel_club_slot_occurrence(
     if require_leader and not await is_club_leader(db, club_id, cancelled_by_user_id):
         return "not_allowed"
 
-    booking_dt = datetime.combine(target_date, time(slot.hour)).replace(
-        tzinfo=ZoneInfo(TIMEZONE)
-    )
+    booking_dt = slot_start(target_date, slot.hour)
     if booking_dt <= now_tz():
         return "past_slot"
 

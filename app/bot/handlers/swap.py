@@ -1,7 +1,6 @@
 # app/bot/handlers/swap.py
 import logging
-from datetime import datetime, time
-from zoneinfo import ZoneInfo
+from datetime import datetime
 
 from aiogram import F, Router, types
 from aiogram.filters import Command
@@ -21,7 +20,6 @@ from app.bot.ui import (
     edit_or_answer,
     safe_answer_callback,
 )
-from app.core.config import TIMEZONE
 from app.core.database import AsyncSessionLocal
 from app.models.booking import Booking
 from app.models.user import User
@@ -32,7 +30,7 @@ from app.services.swap_service import (
     create_swap_offer,
     decline_swap_offer,
 )
-from app.services.time_service import now_tz
+from app.services.time_service import now_tz, slot_start
 
 log = logging.getLogger(__name__)
 router = Router()
@@ -154,7 +152,7 @@ async def handle_swap_day_pick(callback: types.CallbackQuery, state: FSMContext)
         taken_hours = [
             h
             for h in all_hours
-            if datetime.combine(target_date, time(h)).replace(tzinfo=ZoneInfo(TIMEZONE))
+            if slot_start(target_date, h)
             > now
         ]
 
@@ -287,7 +285,7 @@ async def _load_upcoming_bookings(db, user_id: int, now) -> list:
     ).scalars().all()
     return [
         b for b in all_b
-        if datetime.combine(b.date, time(b.hour)).replace(tzinfo=ZoneInfo(TIMEZONE)) > now
+        if slot_start(b.date, b.hour) > now
     ]
 
 

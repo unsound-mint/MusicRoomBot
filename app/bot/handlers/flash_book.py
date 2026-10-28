@@ -1,8 +1,7 @@
 # app/bot/handlers/flash_book.py
 import logging
 from contextlib import suppress
-from datetime import date, datetime, time
-from zoneinfo import ZoneInfo
+from datetime import date
 
 from aiogram import Bot, F, Router, types
 from aiogram.exceptions import TelegramBadRequest
@@ -10,11 +9,10 @@ from sqlalchemy import select
 
 from app.bot.constants.dates import WEEKDAYS
 from app.bot.flash_book_store import pop as pop_flash_message
-from app.core.config import TIMEZONE
 from app.core.database import AsyncSessionLocal
 from app.models.user import User
 from app.services.booking_service import safe_create_booking
-from app.services.time_service import now_tz
+from app.services.time_service import now_tz, slot_start
 
 log = logging.getLogger(__name__)
 router = Router()
@@ -68,7 +66,7 @@ async def handle_flash_book(callback: types.CallbackQuery) -> None:
 
     b_date, b_hour = parsed
 
-    booking_dt = datetime.combine(b_date, time(b_hour)).replace(tzinfo=ZoneInfo(TIMEZONE))
+    booking_dt = slot_start(b_date, b_hour)
     if booking_dt <= now_tz():
         await callback.answer("⏰ This slot is in the past.", show_alert=True)
         pop_flash_message(b_date, b_hour)

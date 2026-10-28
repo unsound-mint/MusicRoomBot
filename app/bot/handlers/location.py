@@ -1,5 +1,5 @@
 # app/bot/handlers/location.py
-from datetime import datetime, time, timedelta
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from aiogram import F, Router, types
@@ -15,6 +15,7 @@ from app.services.admin_service import is_admin
 from app.services.attendance_service import get_current_booking, record_absence
 from app.services.config_runtime import get_runtime_config
 from app.services.geo_service import get_geo_config, mark_attendance_chain_verified
+from app.services.time_service import slot_start
 from app.services.warning_service import add_warning
 from app.utils.geo import distance_meters
 
@@ -82,10 +83,7 @@ async def handle_location(message: types.Message) -> None:
         except Exception:
             late_minutes = 10
 
-        booking_start = datetime.combine(
-            booking.date,
-            time(booking.hour, 0),
-        ).replace(tzinfo=ZoneInfo(TIMEZONE))
+        booking_start = slot_start(booking.date, booking.hour)
 
         deadline = booking_start + timedelta(minutes=late_minutes)
 

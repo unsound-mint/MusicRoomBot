@@ -1,5 +1,4 @@
-from datetime import date, datetime, time, timedelta
-from zoneinfo import ZoneInfo
+from datetime import date, timedelta
 
 from aiogram import F, Router, types
 
@@ -11,7 +10,6 @@ from app.bot.keyboards.inline_kb import (
     club_week_kb,
 )
 from app.bot.ui import edit_or_answer, safe_answer_callback
-from app.core.config import TIMEZONE
 from app.core.database import AsyncSessionLocal
 from app.models.user import User
 from app.services.club_service import (
@@ -21,7 +19,7 @@ from app.services.club_service import (
     get_user_clubs,
 )
 from app.services.date_service import get_current_week_dates
-from app.services.time_service import now_tz
+from app.services.time_service import now_tz, slot_start
 
 router = Router()
 
@@ -177,10 +175,7 @@ async def club_slot_detail(callback: types.CallbackQuery):
         for occurrence in occurrences:
             if occurrence.slot.id != slot_id:
                 continue
-            slot_dt = datetime.combine(
-                occurrence.target_date,
-                time(occurrence.slot.hour),
-            ).replace(tzinfo=ZoneInfo(TIMEZONE))
+            slot_dt = slot_start(occurrence.target_date, occurrence.slot.hour)
             can_cancel = (
                 slot_dt > now_tz()
                 and not occurrence.is_cancelled

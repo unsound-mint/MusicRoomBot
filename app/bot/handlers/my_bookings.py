@@ -1,7 +1,5 @@
 # app/bot/handlers/my_bookings.py
 import logging
-from datetime import datetime, time
-from zoneinfo import ZoneInfo
 
 from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
@@ -22,7 +20,6 @@ from app.bot.ui import (
     format_slot_text,
     safe_answer_callback,
 )
-from app.core.config import TIMEZONE
 from app.core.database import AsyncSessionLocal
 from app.models.booking import Booking
 from app.models.user import User
@@ -35,7 +32,7 @@ from app.services.booking_service import (
 )
 from app.services.calendar_service import get_google_calendar_link
 from app.services.config_runtime import get_runtime_config
-from app.services.time_service import now_tz
+from app.services.time_service import now_tz, slot_start
 
 log = logging.getLogger(__name__)
 
@@ -164,9 +161,7 @@ async def my_booking_detail(callback: types.CallbackQuery, state: FSMContext):
             slot_length_minutes=slot_length_i,
         )
 
-        booking_dt = datetime.combine(booking.date, time(booking.hour)).replace(
-            tzinfo=ZoneInfo(TIMEZONE)
-        )
+        booking_dt = slot_start(booking.date, booking.hour)
         from app.bot.constants.dates import WEEKDAYS
 
         return await edit_or_answer(
@@ -207,9 +202,7 @@ async def gift_slot(callback: types.CallbackQuery, state: FSMContext):
                 note="⚠️ That booking is no longer available.",
             )
 
-        booking_dt = datetime.combine(booking.date, time(booking.hour)).replace(
-            tzinfo=ZoneInfo(TIMEZONE)
-        )
+        booking_dt = slot_start(booking.date, booking.hour)
         if booking_dt <= now_tz():
             return await edit_or_answer(callback, "⏰ Past bookings can't be gifted.")
 
@@ -464,9 +457,7 @@ async def cancel_slot(callback: types.CallbackQuery):
                 note="⚠️ That booking is no longer available.",
             )
 
-        booking_dt = datetime.combine(booking.date, time(booking.hour)).replace(
-            tzinfo=ZoneInfo(TIMEZONE)
-        )
+        booking_dt = slot_start(booking.date, booking.hour)
         if booking_dt <= now_tz():
             return await edit_or_answer(
                 callback, "⏰ Past bookings can't be cancelled."
@@ -503,9 +494,7 @@ async def confirm_cancel_slot(callback: types.CallbackQuery):
                 note="⚠️ That booking is no longer available.",
             )
 
-        booking_dt = datetime.combine(booking.date, time(booking.hour)).replace(
-            tzinfo=ZoneInfo(TIMEZONE)
-        )
+        booking_dt = slot_start(booking.date, booking.hour)
         if booking_dt <= now_tz():
             return await edit_or_answer(
                 callback, "⏰ Past bookings can't be cancelled."
