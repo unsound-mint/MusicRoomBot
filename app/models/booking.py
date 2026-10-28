@@ -68,5 +68,15 @@ class Booking(Base):
         DateTime(timezone=True),
         nullable=True,
     )
+    # Persisted reminder markers: set once the reminder was delivered (or can never
+    # be delivered), so restarts and repeated scheduler ticks do not resend it.
+    reminded_hourly_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    reminded_15_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
 
     user: Mapped["User"] = relationship("User")

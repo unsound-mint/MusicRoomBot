@@ -1,17 +1,15 @@
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from datetime import date, datetime, time
+from datetime import date
 from typing import Literal
-from zoneinfo import ZoneInfo
 
 from sqlalchemy import and_, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import TIMEZONE
 from app.models.booking import Booking
 from app.models.swap_offer import SwapOffer
 from app.models.user import User
-from app.services.time_service import now_tz
+from app.services.time_service import now_tz, slot_start
 
 
 @dataclass(frozen=True)
@@ -181,6 +179,9 @@ async def accept_swap_offer(
 
     giver_b.user_id = receiver_uid
     receiver_b.user_id = giver_uid
+    for swapped in (giver_b, receiver_b):
+        swapped.reminded_hourly_at = None
+        swapped.reminded_15_at = None
     offer.status = "accepted"
     await db.execute(
         update(SwapOffer)
@@ -225,9 +226,7 @@ async def accept_swap_offer(
 
 
 def _is_future_slot(slot_date: date, slot_hour: int) -> bool:
-    slot_dt = datetime.combine(slot_date, time(slot_hour)).replace(
-        tzinfo=ZoneInfo(TIMEZONE)
-    )
+    slot_dt = slot_start(slot_date, slot_hour)
     return slot_dt > now_tz()
 
 

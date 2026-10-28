@@ -1,16 +1,14 @@
 # app/services/booking_service.py
 import logging
 from dataclasses import dataclass
-from datetime import date, datetime, time, timedelta
+from datetime import date, timedelta
 from typing import Literal
-from zoneinfo import ZoneInfo
 
 from sqlalchemy import and_, delete, func, insert, select
 from sqlalchemy.exc import IntegrityError
 
 from app.bot.constants.dates import WEEKDAYS
 from app.bot.markdown import markdown_display
-from app.core.config import TIMEZONE
 from app.core.metrics import increment, timed
 from app.models.booking import Booking
 from app.models.gift_offer import GiftOffer
@@ -26,7 +24,7 @@ from app.services.club_service import is_weekly_reserved_for_date
 from app.services.config_runtime import get_runtime_config
 from app.services.config_service import get_working_hours
 from app.services.date_service import get_current_week_dates
-from app.services.time_service import now_tz
+from app.services.time_service import now_tz, slot_start
 from app.services.warning_service import add_warning
 
 log = logging.getLogger(__name__)
@@ -208,9 +206,7 @@ async def gift_booking_to_username(
     if booking is None:
         return GiftBookingResult(status="booking_not_found")
 
-    booking_dt = datetime.combine(booking.date, time(booking.hour)).replace(
-        tzinfo=ZoneInfo(TIMEZONE)
-    )
+    booking_dt = slot_start(booking.date, booking.hour)
     if booking_dt <= now_tz():
         return GiftBookingResult(status="past_booking", booking=booking)
 
@@ -307,6 +303,8 @@ def _reset_booking_attendance_for_gift(booking: Booking) -> None:
     booking.attendance_lat = None
     booking.attendance_lon = None
     booking.attendance_recorded_at = None
+    booking.reminded_hourly_at = None
+    booking.reminded_15_at = None
 
 
 async def accept_gift_offer(
@@ -342,9 +340,7 @@ async def accept_gift_offer(
         await db.commit()
         return GiftOfferDecisionResult(status="booking_not_found", offer=offer)
 
-    booking_dt = datetime.combine(booking.date, time(booking.hour)).replace(
-        tzinfo=ZoneInfo(TIMEZONE)
-    )
+    booking_dt = slot_start(booking.date, booking.hour)
     if booking_dt <= now_tz():
         offer.status = "expired"
         offer.responded_at = now_tz()
@@ -538,9 +534,7 @@ async def _do_delete_booking(db, booking, bot=None, is_admin_cancel=False) -> bo
     user_id = booking.user_id
 
     now = now_tz()
-    booking_dt = datetime.combine(b_date, time(b_hour)).replace(
-        tzinfo=ZoneInfo(TIMEZONE)
-    )
+    booking_dt = slot_start(b_date, b_hour)
 
     if booking_dt <= now and not is_admin_cancel:
         return False
@@ -825,9 +819,7 @@ async def get_consecutive_slot_option(
         return None
 
     now = now_tz()
-    booking_dt = datetime.combine(b_date, time(next_hour)).replace(
-        tzinfo=ZoneInfo(TIMEZONE)
-    )
+    booking_dt = slot_start(b_date, next_hour)
     if booking_dt <= now:
         return None
 

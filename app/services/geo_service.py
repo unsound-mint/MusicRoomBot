@@ -3,22 +3,20 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import date, datetime, time, timedelta
+from datetime import date, timedelta
 from typing import TYPE_CHECKING, SupportsFloat, SupportsIndex
-from zoneinfo import ZoneInfo
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.constants.dates import WEEKDAYS
 from app.bot.keyboards.location_kb import request_location_kb
-from app.core.config import TIMEZONE
 from app.core.database import AsyncSessionLocal
 from app.models.booking import Booking
 from app.models.user import User
 from app.services.attendance_service import record_attendance
 from app.services.config_runtime import get_runtime_config
-from app.services.time_service import now_tz
+from app.services.time_service import now_tz, slot_start
 from app.services.warning_service import add_warning
 
 if TYPE_CHECKING:
@@ -215,9 +213,12 @@ async def process_geo_checks(bot: Bot) -> None:
         hours_for_expiry.append((prev_date, prev_hour))
 
     # ------------------------------------------------------------
-    # PHASE A: PROMPT (only at minute == 0)
+    # PHASE A: PROMPT (any tick inside the check-in window of the current hour)
+    #
+    # location_prompted is persisted per booking, so a missed tick at HH:00 is
+    # caught up on the next one and a booking is never prompted twice.
     # ------------------------------------------------------------
-    if now.minute == 0:
+    if now < slot_start(today, cur_hour) + timedelta(minutes=late_minutes):
         rows_to_prompt: list[tuple[int, int, int, str]] = []
         # (booking_id, user_id, tg_user_id, display)
 
@@ -255,6 +256,9 @@ async def process_geo_checks(bot: Bot) -> None:
                     )
 
         if rows_to_prompt:
+            check_in_deadline = slot_start(today, cur_hour) + timedelta(
+                minutes=late_minutes
+            )
             prompted_booking_ids: list[int] = []
 
             for booking_id, _user_id, tg_user_id, _display in rows_to_prompt:
@@ -262,7 +266,7 @@ async def process_geo_checks(bot: Bot) -> None:
                     await bot.send_message(
                         tg_user_id,
                         "Check-in window is open now.\n"
-                        f"Deadline: {(booking_start := datetime.combine(today, time(cur_hour)).replace(tzinfo=ZoneInfo(TIMEZONE)) + timedelta(minutes=late_minutes)).strftime('%H:%M')}",
+                        f"Deadline: {check_in_deadline.strftime('%H:%M')}",
                         reply_markup=request_location_kb(),
                     )
                     prompted_booking_ids.append(booking_id)
@@ -286,10 +290,7 @@ async def process_geo_checks(bot: Bot) -> None:
     # PHASE B: EXPIRATION / ABSENCE (process current + previous hour)
     # ------------------------------------------------------------
     for b_date, b_hour in hours_for_expiry:
-        booking_start = datetime.combine(b_date, time(b_hour)).replace(
-            tzinfo=ZoneInfo(TIMEZONE)
-        )
-        deadline = booking_start + timedelta(minutes=late_minutes)
+        deadline = slot_start(b_date, b_hour) + timedelta(minutes=late_minutes)
 
         # If window not expired yet, skip
         if now < deadline:
