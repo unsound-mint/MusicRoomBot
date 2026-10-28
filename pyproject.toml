@@ -8,7 +8,7 @@ name = "musicroom"
 version = "0.1.0"
 description = "Music Room Telegram booking bot"
 readme = "README.md"
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.12,<3.14"
 dependencies = [
   "aiogram==3.22.0",
   "SQLAlchemy==2.0.45",
