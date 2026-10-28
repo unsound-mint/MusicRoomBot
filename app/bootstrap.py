@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 import subprocess
 import sys
@@ -6,12 +7,16 @@ from typing import Any
 
 from sqlalchemy import select
 
+from app.core.config import LOG_LEVEL
 from app.core.database import AsyncSessionLocal
+from app.core.logging import configure_logging
 from app.models.admin import Admin
 from app.models.config_model import Config
 from app.models.user import User
 from app.models.weekly_slot import WeeklySlot
 from app.services.config_runtime import DEFAULTS
+
+log = logging.getLogger(__name__)
 
 INITIAL_WEEKLY_SLOTS = [
     {"weekday": 0, "hour": 18, "group_name": "Art Revolution"},
@@ -64,7 +69,7 @@ def _config_defaults() -> dict[str, Any]:
 
 
 def run_migrations() -> None:
-    print("Running alembic upgrade head ...")
+    log.info("Running alembic upgrade head")
     subprocess.check_call([sys.executable, "-m", "alembic", "upgrade", "head"])
 
 
@@ -103,7 +108,7 @@ async def seed_weekly_slots(session: Any) -> None:
 async def seed_initial_admin(session: Any) -> None:
     tg_user_id = _env_int("BOOTSTRAP_ADMIN_TG_ID")
     if tg_user_id is None:
-        print("Skipping admin seed: BOOTSTRAP_ADMIN_TG_ID is not set.")
+        log.info("Skipping admin seed: BOOTSTRAP_ADMIN_TG_ID is not set")
         return
 
     username = _env_str("BOOTSTRAP_ADMIN_TG_USERNAME")
@@ -139,7 +144,7 @@ async def seed_initial_admin(session: Any) -> None:
 
 
 async def seed_database() -> None:
-    print("Seeding runtime config, weekly slots, and optional initial admin ...")
+    log.info("Seeding runtime config, weekly slots, and optional initial admin")
     async with AsyncSessionLocal() as session:
         await seed_runtime_config(session)
         await seed_weekly_slots(session)
@@ -148,9 +153,10 @@ async def seed_database() -> None:
 
 
 def main() -> None:
+    configure_logging(LOG_LEVEL)
     run_migrations()
     asyncio.run(seed_database())
-    print("Bootstrap complete.")
+    log.info("Bootstrap complete")
 
 
 if __name__ == "__main__":
