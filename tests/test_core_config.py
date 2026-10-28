@@ -72,11 +72,11 @@ class CoreConfigTests(TestCase):
 
         self.assertEqual(reloaded.LOG_LEVEL, "INFO")
 
-    def test_access_form_url_defaults_to_google_form(self) -> None:
+    def test_access_form_url_defaults_to_placeholder(self) -> None:
         with patch.dict(os.environ, {}, clear=True):
             reloaded = self.reload_config()
 
-        self.assertEqual(reloaded.ACCESS_FORM_URL, "https://forms.gle/YEiqGNfKt7fAbqFP9")
+        self.assertEqual(reloaded.ACCESS_FORM_URL, "https://example.com/access-form")
 
     def test_access_form_url_reads_env(self) -> None:
         with patch.dict(

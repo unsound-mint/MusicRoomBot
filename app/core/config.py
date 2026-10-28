@@ -52,7 +52,7 @@ BOT_TOKEN = _get_env("BOT_TOKEN")
 DATABASE_URL = _normalize_database_url(_get_env("DATABASE_URL"))
 TIMEZONE = _get_env("TIMEZONE", "Asia/Almaty") or "Asia/Almaty"
 LOG_LEVEL = _normalize_log_level(_get_env("LOG_LEVEL", "INFO"))
-ACCESS_FORM_URL = _get_env("ACCESS_FORM_URL", "https://forms.gle/YEiqGNfKt7fAbqFP9")
+ACCESS_FORM_URL = _get_env("ACCESS_FORM_URL", "https://example.com/access-form")
 
 
 def require_bot_token() -> str:
