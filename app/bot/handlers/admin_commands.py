@@ -1,10 +1,15 @@
-# app/bot/handlers/admin_legacy.py
+# app/bot/handlers/admin_commands.py
+"""Slash-command admin handlers (/ban_user, /set_*, /warnings, ...).
+
+The inline admin panel lives in the other admin_*.py modules; these commands
+remain as the text-based path for the same operations.
+"""
 from aiogram import Router, types
 from aiogram.filters import Command
 
-from app.bot.handlers.admin_legacy_config import router as config_router
-from app.bot.handlers.admin_legacy_users import router as users_router
-from app.bot.handlers.admin_legacy_warnings import router as warnings_router
+from app.bot.handlers.admin_commands_config import router as config_router
+from app.bot.handlers.admin_commands_users import router as users_router
+from app.bot.handlers.admin_commands_warnings import router as warnings_router
 from app.bot.handlers.admin_shared import check_admin_and_reply
 from app.services.scheduler_service import get_scheduler_jobs
 from app.services.system_status import collect_system_status
