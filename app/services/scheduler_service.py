@@ -12,6 +12,7 @@ from apscheduler.schedulers import SchedulerNotRunningError
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import TIMEZONE
 from app.core.database import AsyncSessionLocal
@@ -33,6 +34,39 @@ scheduler = AsyncIOScheduler(timezone=ZoneInfo(TIMEZONE))
 def _advisory_lock_key(job_name: str) -> int:
     digest = sha256(f"musicroom:scheduler:{job_name}".encode()).digest()
     return int.from_bytes(digest[:8], byteorder="big", signed=True)
+
+
+async def _release_advisory_lock(db: AsyncSession, job_name: str, lock_key: int) -> None:
+    """
+    The lock is session-level, so it lives as long as the pooled connection.
+    If the unlock fails or reports it was not held, drop the connection instead of
+    returning it to the pool, which would leave the lock held and block the job.
+    """
+    try:
+        result = await db.execute(
+            text("SELECT pg_advisory_unlock(:lock_key)"),
+            {"lock_key": lock_key},
+        )
+        if result.scalar() is not False:
+            return
+        log.error(
+            "Advisory lock was not held at release",
+            extra={"job": job_name},
+        )
+    except Exception:
+        log.exception(
+            "Failed to release scheduled job advisory lock",
+            extra={"job": job_name},
+        )
+
+    try:
+        connection = await db.connection()
+        await connection.invalidate()
+    except Exception:
+        log.exception(
+            "Failed to invalidate connection after advisory unlock failure",
+            extra={"job": job_name},
+        )
 
 
 async def _run_with_advisory_lock(
@@ -72,16 +106,7 @@ async def _run_with_advisory_lock(
             )
             raise
         finally:
-            try:
-                await db.execute(
-                    text("SELECT pg_advisory_unlock(:lock_key)"),
-                    {"lock_key": lock_key},
-                )
-            except Exception:
-                log.exception(
-                    "Failed to release scheduled job advisory lock",
-                    extra={"job": job_name},
-                )
+            await _release_advisory_lock(db, job_name, lock_key)
 
 
 async def weekly_reset_job(bot: Bot | None) -> None:

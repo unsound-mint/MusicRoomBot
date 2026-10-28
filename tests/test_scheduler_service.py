@@ -147,3 +147,41 @@ class SchedulerServiceTests(IsolatedAsyncioTestCase):
             any("Reminder job failed" in message for message in logs.output),
             logs.output,
         )
+
+    async def test_failed_unlock_invalidates_connection(self) -> None:
+        session = AsyncMock()
+        session.execute.side_effect = [_ScalarResult(True), RuntimeError("conn lost")]
+        connection = AsyncMock()
+        session.connection.return_value = connection
+
+        with (
+            patch.object(
+                scheduler_service,
+                "AsyncSessionLocal",
+                Mock(return_value=_AsyncSessionContext(session)),
+            ),
+            patch.object(scheduler_service, "process_reminders", new=AsyncMock()),
+            self.assertLogs(scheduler_service.log, level="ERROR"),
+        ):
+            await scheduler_service.reminder_job(object())
+
+        connection.invalidate.assert_awaited_once()
+
+    async def test_unlock_reporting_lock_not_held_invalidates_connection(self) -> None:
+        session = AsyncMock()
+        session.execute.side_effect = [_ScalarResult(True), _ScalarResult(False)]
+        connection = AsyncMock()
+        session.connection.return_value = connection
+
+        with (
+            patch.object(
+                scheduler_service,
+                "AsyncSessionLocal",
+                Mock(return_value=_AsyncSessionContext(session)),
+            ),
+            patch.object(scheduler_service, "process_reminders", new=AsyncMock()),
+            self.assertLogs(scheduler_service.log, level="ERROR"),
+        ):
+            await scheduler_service.reminder_job(object())
+
+        connection.invalidate.assert_awaited_once()
