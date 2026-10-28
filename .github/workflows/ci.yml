@@ -26,6 +26,8 @@ jobs:
       BOT_TOKEN: "ci-token"
       DATABASE_URL: "postgresql+asyncpg://musicroom:musicroom@localhost:5432/musicroom"
       TIMEZONE: "Asia/Almaty"
+      # Enables the Postgres-backed booking concurrency tests (temporary schema).
+      MUSICROOM_POSTGRES_TEST_DATABASE_URL: "postgresql+asyncpg://musicroom:musicroom@localhost:5432/musicroom"
 
     steps:
       - name: Check out repository
@@ -59,7 +61,7 @@ jobs:
       - name: Run mypy
         run: uv run mypy app
 
-      - name: Run unit tests
+      - name: Run unit and Postgres concurrency tests
         run: uv run python -m unittest discover -s tests
 
       - name: Check Alembic heads
