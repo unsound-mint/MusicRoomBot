@@ -26,8 +26,8 @@ PostgreSQL
 ```
 
 APScheduler runs background jobs for weekly resets, reminders, and attendance
-checks. The bot runs as a single polling process because the scheduler and
-Telegram polling model are not distributed-safe in this implementation.
+checks. The bot runs as a single polling process because FSM storage, the
+flash-book store and the rate limiter are in memory (see `docs/deployment.md`).
 
 ## Layers
 
@@ -100,8 +100,9 @@ system safe if two users try to book the same slot at nearly the same time.
 
 The weekly per-user booking limit is protected by a transaction-scoped
 PostgreSQL advisory lock per user/week around the count-and-insert operation.
-The regular unit suite verifies the lock call order; an opt-in Postgres
-concurrency test can validate the invariant against a real database.
+The regular unit suite verifies the lock call order; the Postgres concurrency
+tests validate the weekly limit and single-winner slot booking against a real
+database, and CI runs them.
 
 Booking flows also use an in-process semaphore to avoid exhausting the database
 pool during bursts of repeated Telegram interactions.
@@ -115,8 +116,14 @@ handles:
 - hourly and 15-minute reminders
 - attendance and location-related checks
 
-The current deployment model expects one bot replica. Running multiple replicas
-would require distributed scheduling and Telegram polling coordination.
+Reminder and check-in jobs select bookings by time window and persist what they
+sent (`reminded_hourly_at`, `reminded_15_at`, `location_prompted`), so a missed or
+repeated tick neither loses nor duplicates a message. Each job also holds a
+PostgreSQL advisory lock while it runs.
+
+The supported deployment is one bot replica. Advisory locks cover a brief overlap
+during a deploy; running several replicas would additionally need shared FSM
+storage and Telegram polling coordination.
 
 ## Testing And Quality Gates
 
@@ -125,7 +132,7 @@ behavior, scheduler setup, and migration metadata. CI runs:
 
 - Ruff linting
 - mypy type checking
-- unit tests
+- unit tests, including the Postgres-backed booking concurrency and reminder tests
 - Alembic head checks
 - migration smoke test against PostgreSQL
 - application healthcheck

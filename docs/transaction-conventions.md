@@ -73,8 +73,14 @@ Use the database as the final authority for invariants.
 - Slot uniqueness is enforced by `uq_booking_date_hour`.
 - Weekly per-user booking limits are serialized with a transaction-scoped
   PostgreSQL advisory lock per user/week before count-and-insert decisions.
-- Scheduler jobs use session-level PostgreSQL advisory locks so multiple bot
-  processes do not run the same scheduled job concurrently.
+- Scheduler jobs take a session-level PostgreSQL advisory lock, so a second bot
+  process that overlaps briefly (for example during a deploy) skips a job that is
+  already running. This is a safety net, not multi-replica support: the bot is
+  supported as a single replica (see `docs/deployment.md`). If releasing the lock
+  fails, the pooled connection is invalidated so the lock cannot leak.
+- Reminders and check-in prompts are selected by time window and recorded on the
+  booking (`reminded_hourly_at`, `reminded_15_at`, `location_prompted`), so a
+  missed tick is caught up and a repeated tick or restart does not resend them.
 
 Application-layer checks are still useful for user-friendly messages, but they
 must not be the only protection for critical invariants.
@@ -85,11 +91,12 @@ When a change touches state mutation, add service-level tests around the command
 function. Handler tests should verify delegation and rendered messages, not ORM
 write mechanics.
 
-For race-sensitive booking behavior, use the opt-in Postgres concurrency test:
+For race-sensitive booking behavior and the reminder markers, use the opt-in
+Postgres tests (CI runs them against its Postgres service):
 
 ```bash
 MUSICROOM_POSTGRES_TEST_DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/musicroom_test \
-python -m unittest tests/test_booking_concurrency_postgres.py
+python -m unittest discover -s tests
 ```
 
 The test creates a temporary schema and drops it afterward, but the database URL

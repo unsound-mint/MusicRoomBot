@@ -9,10 +9,14 @@ are replaced.
 
 Run exactly one active bot replica.
 
-The bot uses Telegram polling and starts APScheduler jobs in process. Multiple
-active replicas can duplicate scheduled reminders, weekly reset messages, and
-attendance checks unless scheduling and polling are redesigned for distributed
-execution.
+The bot uses Telegram polling and starts APScheduler jobs in process. Conversation
+state (aiogram FSM storage), the flash-book message store and the rate limiter are
+in memory, so a single replica is the only supported mode.
+
+PostgreSQL advisory locks protect scheduled jobs and bookings if a second instance
+runs briefly, for example while a deploy replaces the container. They do not make
+several long-running replicas safe: each would still poll Telegram and hold its own
+in-memory state.
 
 ## Docker Compose
 

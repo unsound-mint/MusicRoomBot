@@ -13,7 +13,9 @@ Telegram bot that runs bookings for Nazarbayev University's Music Room: slot boo
 - Lets members book available practice-room slots and cancel their own bookings.
 - Prevents double-booking with both application checks and database constraints.
 - Supports consecutive booking chains with reminders sent only for the first slot.
-- Verifies attendance with location-based check-ins and configurable late windows.
+- Checks attendance with location-based check-ins and configurable late windows
+  (a Telegram location can be spoofed, so this deters casual no-shows rather than
+  proving presence).
 - Handles member swaps, gift offers, club slots, equipment requests, warning appeals,
   and admin moderation flows.
 - Stores operational settings in the database so chat IDs, geo settings, limits,
@@ -32,7 +34,8 @@ This project is intended to be readable as a production-style async Python servi
 - **Operational resilience:** runtime config caching, booking backpressure,
   healthcheck entry point, Docker packaging, and CI migration smoke tests.
 - **Quality gates:** Ruff, mypy, unit tests, lockfile verification, Alembic heads,
-  Postgres-backed migration test, and Docker build run in GitHub Actions.
+  Postgres-backed booking concurrency tests, migration smoke test, and Docker
+  build run in GitHub Actions.
 
 ## Architecture
 
@@ -95,8 +98,8 @@ Member: Selects Tuesday 18:00
 Bot: Confirms the booking, adds calendar action, and schedules reminders.
 
 Member: Shares location during the booked slot
-Bot: Verifies attendance if the member is inside the configured radius and before
-     the late deadline.
+Bot: Marks attendance as checked if the shared location is inside the configured
+     radius and before the late deadline.
 ```
 
 Example admin flow:
@@ -142,7 +145,7 @@ Optional topic settings:
 
 ## Local Run
 
-1. Install dependencies with `uv sync --frozen`.
+1. Install dependencies with `uv sync --frozen` (Python 3.12 or newer; CI and Docker use 3.13).
 2. Run migrations with `uv run python -m app.migrate`.
 3. For first-time setup, seed default data with `uv run python -m app.seed`.
 4. Start the bot with `uv run python -m app.bot.main`.
@@ -175,8 +178,10 @@ migrations before polling starts. To seed default data for first-time setup, run
 `docker compose run --rm bot python -m app.seed`.
 
 The Compose setup runs one bot container and one Postgres container. Keep the
-bot scaled to a single replica because polling and scheduled reminder jobs are
-not distributed-safe.
+bot scaled to a single replica: FSM storage, the flash-book store and the rate
+limiter are in memory. Advisory locks protect scheduled jobs and bookings if a
+second instance starts briefly during a deploy, but they do not make several
+long-running replicas supported.
 
 The default Compose database credentials are for local development only. Set
 strong `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB` values before any
@@ -198,10 +203,14 @@ Before publishing a fork or mirror:
 - Lint: `uv run ruff check app tests`
 - Types: `uv run mypy app`
 - Tests: `uv run python -m unittest discover -s tests`
+- Postgres-backed tests (booking concurrency, reminder markers): also set
+  `MUSICROOM_POSTGRES_TEST_DATABASE_URL` to a disposable database; without it they
+  are skipped
 - Migrations: `uv run alembic heads`
 - Migration smoke test: `uv run alembic upgrade head` against Postgres
 - Docker build: `docker build -t musicroom:ci .`
 
-CI runs these checks on push and pull requests with Python 3.13, verifies the
-lockfile with `uv lock --locked`, applies migrations against Postgres, runs the
+CI runs these checks on push and pull requests with Python 3.13, including the
+Postgres-backed tests against a Postgres service. It also verifies the lockfile
+with `uv lock --locked`, applies migrations against Postgres, runs the
 healthcheck, and builds the Docker image.

@@ -2,7 +2,7 @@
 
 ## Development
 
-Use the commands documented in `README.md` and `AGENTS.md`.
+Use the commands documented in `README.md`.
 
 Before opening a pull request, run:
 
