@@ -3,6 +3,7 @@ import asyncio
 
 from aiogram import Bot, Dispatcher
 
+from app.bot.error_handler import on_error
 from app.bot.handlers.admin import router as admin_router
 from app.bot.handlers.booking import router as booking_router
 from app.bot.handlers.club_slots import router as club_slots_router
@@ -33,10 +34,11 @@ async def on_shutdown(**_: object) -> None:
     await dispose_engine()
 
 
-async def main():
+async def main() -> None:
     bot = Bot(require_bot_token())
     dp = Dispatcher()
 
+    dp.errors.register(on_error)
     dp.include_router(start_router)
     dp.include_router(booking_router)
     dp.include_router(club_slots_router)
@@ -53,7 +55,10 @@ async def main():
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)
 
-    await dp.start_polling(bot)
+    try:
+        await dp.start_polling(bot)
+    finally:
+        await bot.session.close()
 
 
 if __name__ == "__main__":
